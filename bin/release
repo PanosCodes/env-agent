@@ -4,7 +4,7 @@ require 'bump'
 require 'open3'
 require_relative '../lib/env_agent/version'
 
-# Releases env-agent at the next major, minor or patch version, or at VERSION: bumps it, checks, commits, tags, pushes and creates the GitHub release.
+# Releases env-agent at the next major, minor or patch version, or at VERSION: bumps it, checks, commits, tags, pushes, creates the GitHub release and pushes the gem to RubyGems.
 class Release
   BRANCH = 'master'.freeze
   VERSION_FILE = 'lib/env_agent/version.rb'.freeze
@@ -26,6 +26,7 @@ class Release
     sh('git', 'tag', '-a', tag, '-m', tag)
     sh('git', 'push', '--atomic', remote, "#{BRANCH}:#{BRANCH}", tag)
     sh('gh', 'release', 'create', tag, gem_file, '--verify-tag', '--title', tag, '--generate-notes')
+    sh('gem', 'push', gem_file)
     puts("released #{tag}")
   end
 

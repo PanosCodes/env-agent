@@ -47,7 +47,7 @@ macOS with Ruby 3.3, 3.4 and 4.0. A change is done when it passes.
 | `lib/env_agent/agent.rb` | Writing the agent copies and comparing versions |
 | `templates/agent.md` | The agent template; bump its `version` when its instructions change |
 | `lib/rubocop/cop/` | House RuboCop cops; development only, not shipped in the gem |
-| `bin/release` | Releases a version to GitHub; development only, not shipped in the gem |
+| `bin/release` | Releases a version to GitHub and RubyGems; development only, not shipped in the gem |
 | `spec/env_agent/cli_spec.rb` | Specs for every command |
 | `spec/support/sandbox.rb` | Throwaway main checkout, worktree and HOME for the specs |
 
@@ -86,9 +86,10 @@ macOS with Ruby 3.3, 3.4 and 4.0. A change is done when it passes.
 `bin/release major|minor|patch` (or `bin/release VERSION`) bumps
 `EnvAgent::VERSION` and `Gemfile.lock` with the `bump` gem, runs
 `bundle exec rake`, builds the gem, commits `build: release vVERSION`, tags and
-pushes `master`, and creates a GitHub release with the `.gem` attached. Nothing
-goes to RubyGems. It refuses a dirty tree, another branch, a `master` behind or
-diverged from its remote, and an existing tag.
+pushes `master`, creates a GitHub release with the `.gem` attached, and pushes
+the gem to RubyGems, which asks for your OTP code. It refuses a dirty tree,
+another branch, a `master` behind or diverged from its remote, and an existing
+tag.
 
 ## Commits
 

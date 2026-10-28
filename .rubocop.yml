@@ -1,0 +1,105 @@
+plugins:
+  - rubocop-rspec
+
+require:
+  - ./lib/rubocop/cop/spec/named_subject.rb
+  - ./lib/rubocop/cop/spec/type_matcher.rb
+  - ./lib/rubocop/cop/spec/nil_let.rb
+  - ./lib/rubocop/cop/spec/reflection.rb
+  - ./lib/rubocop/cop/spec/single_example_context.rb
+
+# House style: the Omakase rules, with the overrides below.
+inherit_gem: { rubocop-rails-omakase: rubocop.yml }
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+  EnforcedStyle: never
+
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+  Include:
+    - "**/*.rb"
+
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: single_quotes
+
+Layout/SpaceInsideArrayLiteralBrackets:
+  Enabled: false
+
+Layout/DotPosition:
+  EnforcedStyle: trailing
+
+Style/ClassAndModuleChildren:
+  Enabled: true
+  EnforcedStyle: compact
+
+RSpec/EmptyLineAfterFinalLet:
+  Enabled: true
+
+RSpec/ExpectChange:
+  Enabled: false
+
+RSpec/NamedSubject:
+  Enabled: false
+
+RSpec/ReceiveMessages:
+  Enabled: false
+
+RSpec/DiscardedMatcher:
+  Enabled: true
+
+RSpec/MatchWithSimpleRegex:
+  Enabled: true
+
+RSpec/MultipleMemoizedHelpers:
+  Enabled: false
+
+RSpec/IndexedLet:
+  Enabled: false
+
+RSpec/MultipleExpectations:
+  Max: 3
+
+RSpec/ExampleLength:
+  Max: 15
+
+RSpec/NestedGroups:
+  Max: 4
+
+RSpec/IncludeExamples:
+  Enabled: true
+
+RSpec/LeakyLocalVariable:
+  Enabled: true
+
+RSpec/Output:
+  Enabled: true
+
+Layout/ExtraSpacing:
+  AllowForAlignment: false
+
+Layout/HashAlignment:
+  EnforcedColonStyle: key
+  EnforcedHashRocketStyle: key
+
+# Spec conventions from the `writing-rspec-tests` skill, implemented by the cops in lib/rubocop/cop/spec.
+Spec/NamedSubject:
+  Enabled: true
+  Include: &spec_files
+    - 'spec/**/*_spec.rb'
+
+Spec/TypeMatcher:
+  Enabled: true
+  Include: *spec_files
+
+Spec/NilLet:
+  Enabled: true
+  Include: *spec_files
+
+Spec/Reflection:
+  Enabled: true
+  Include: *spec_files
+
+Spec/SingleExampleContext:
+  Enabled: true
+  Include: *spec_files

@@ -11,6 +11,14 @@ require:
 # House style: the Omakase rules, with the overrides below.
 inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
+inherit_mode:
+  merge:
+    - Include
+
+AllCops:
+  Include:
+    - bin/release
+
 Style/FrozenStringLiteralComment:
   Enabled: true
   EnforcedStyle: never

@@ -1,0 +1,98 @@
+#!/usr/bin/env ruby
+require 'open3'
+require_relative '../lib/env_agent/version'
+
+# Releases env-agent VERSION: bumps it, checks, commits, tags, pushes and creates the GitHub release.
+class Release
+  BRANCH = 'master'.freeze
+  VERSION_FILE = 'lib/env_agent/version.rb'.freeze
+  LOCK_FILE = 'Gemfile.lock'.freeze
+
+  # @param [Array<String>] argv
+  def initialize(argv)
+    abort('usage: bin/release VERSION') unless argv.size == 1
+    @version = argv.first
+  end
+
+  def run!
+    check!
+    bump!
+    sh('bundle', 'exec', 'rake')
+    sh('gem', 'build', 'env-agent.gemspec', '--output', gem_file)
+    sh('git', 'commit', '-q', '-m', "build: release #{tag}", VERSION_FILE, LOCK_FILE)
+    sh('git', 'tag', '-a', tag, '-m', tag)
+    sh('git', 'push', '--atomic', remote, "#{BRANCH}:#{BRANCH}", tag)
+    sh('gh', 'release', 'create', tag, gem_file, '--verify-tag', '--title', tag, '--generate-notes')
+    puts("released #{tag}")
+  end
+
+  private
+
+  attr_reader :version
+
+  # @return [String]
+  def tag
+    "v#{version}"
+  end
+
+  # @return [String]
+  def gem_file
+    "env-agent-#{version}.gem"
+  end
+
+  # @return [String]
+  def remote
+    @remote ||= git('config', "branch.#{BRANCH}.remote")
+  end
+
+  def check!
+    abort("#{version} is not MAJOR.MINOR.PATCH") unless version.match?(/\A\d+\.\d+\.\d+\z/)
+    abort("#{version} is not newer than #{EnvAgent::VERSION}") unless Gem::Version.new(version) > Gem::Version.new(EnvAgent::VERSION)
+    abort("release from #{BRANCH}") unless git('branch', '--show-current') == BRANCH
+    abort('commit or stash your changes first') unless git('status', '--porcelain').empty?
+    abort("#{tag} already exists") unless git('tag', '--list', tag).empty?
+
+    sh('git', 'fetch', '-q', remote, BRANCH)
+    abort("#{BRANCH} is behind or has diverged from #{remote}/#{BRANCH}") unless ancestor?("#{remote}/#{BRANCH}", 'HEAD')
+  end
+
+  def bump!
+    replace(VERSION_FILE, "VERSION = '#{EnvAgent::VERSION}'", "VERSION = '#{version}'")
+    replace(LOCK_FILE, "env-agent (#{EnvAgent::VERSION})", "env-agent (#{version})")
+  end
+
+  # @param [String] file
+  # @param [String] from
+  # @param [String] to
+  def replace(file, from, to)
+    text = File.read(file)
+    abort("#{file} has no #{from}") unless text.include?(from)
+
+    File.write(file, text.gsub(from) { to })
+  end
+
+  # @param [String] ancestor
+  # @param [String] descendant
+  #
+  # @return [TrueClass, FalseClass]
+  def ancestor?(ancestor, descendant)
+    system('git', 'merge-base', '--is-ancestor', ancestor, descendant)
+  end
+
+  # @param [Array<String>] args
+  #
+  # @return [String]
+  def git(*args)
+    out, status = Open3.capture2('git', *args)
+    abort("git #{args.first} failed") unless status.success?
+
+    out.strip
+  end
+
+  # @param [Array<String>] command
+  def sh(*command)
+    abort("#{command.first(2).join(' ')} failed") unless system(*command)
+  end
+end
+
+Release.new(ARGV).run!

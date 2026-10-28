@@ -1,7 +1,6 @@
 require 'fileutils'
 require 'open3'
 require 'rbconfig'
-require 'yaml'
 
 # A throwaway main checkout, linked worktree, sibling clones and HOME, with the CLI run as a real process.
 class Sandbox
@@ -48,14 +47,17 @@ class Sandbox
     File.join(root, name)
   end
 
-  # @param [Hash, nil] registry contents of .env-agent.yml, nil to leave it out
-  def build_main!(registry)
+  def build_main!
     FileUtils.mkdir_p([main, home])
     git(main, '-c', 'init.defaultBranch=main', 'init', '-q')
-    File.write(File.join(main, '.env-agent.yml'), registry.to_yaml) if registry
     File.write(File.join(main, 'README'), "sandbox\n")
-    git(main, 'add', '.')
-    git(main, '-c', 'user.name=env-agent', '-c', 'user.email=env-agent@example.com', 'commit', '-q', '-m', 'init')
+    commit!('.')
+  end
+
+  # @param [Array<String>] paths relative to the main checkout, committed even when info/exclude lists them
+  def commit!(*paths)
+    git(main, 'add', '-f', *paths)
+    git(main, '-c', 'user.name=env-agent', '-c', 'user.email=env-agent@example.com', 'commit', '-q', '-m', 'commit')
   end
 
   def add_worktree!

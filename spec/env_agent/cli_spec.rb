@@ -224,4 +224,71 @@ RSpec.describe EnvAgent::CLI do
       end
     end
   end
+
+  describe 'unset' do
+    subject { sandbox.run('unset', name) }
+
+    let(:other_line) { 'other=/somewhere' }
+
+    before do
+      sandbox.run('set', name, elsewhere)
+      File.write(main_dotenv, "#{other_line}\n#{File.read(main_dotenv)}")
+    end
+
+    it 'removes the name and the link, keeping other lines', :aggregate_failures do
+      expect { subject }.to change { File.read(main_dotenv) }.to("#{other_line}\n")
+      expect(File.symlink?(link)).to be(false)
+    end
+  end
+
+  describe 'check' do
+    subject { sandbox.run(*args) }
+
+    let(:args) { ['check'] }
+
+    before { File.write(main_dotenv, "#{name}=#{elsewhere}\n") }
+
+    it 'reports each source and creates no link', :aggregate_failures do
+      expect(subject.exitstatus).to eq(0)
+      expect(subject.stdout).to include("#{name}: ok (main checkout .env.agents)", 'main checkout .env.agents: ok',
+                                        'missing (run `env-agent link`)')
+      expect(File.symlink?(link)).to be(false)
+    end
+
+    it_behaves_like 'prints no path'
+
+    context 'with NAME' do
+      let(:other) { 'other' }
+      let(:args) { ['check', name] }
+
+      before { File.write(main_dotenv, "#{name}=#{elsewhere}\n#{other}=#{elsewhere}\n") }
+
+      it 'reports only that name' do
+        expect(subject.stdout).not_to include("#{other}:")
+      end
+    end
+
+    context 'with a NAME that is not set' do
+      let(:args) { %w[check unknown] }
+
+      it 'fails and says how to set it', :aggregate_failures do
+        expect(subject.exitstatus).to eq(1)
+        expect(subject.stdout).to include('unknown: not found', 'env-agent set unknown')
+      end
+    end
+
+    context 'with an older committed agent copy' do
+      let(:repo_copy) { File.join(sandbox.main, '.AGENT', 'agents', 'env-agent.md') }
+
+      before do
+        FileUtils.mkdir_p(File.dirname(repo_copy))
+        File.write(repo_copy, "---\nname: env-agent\nversion: 0\n---\n")
+      end
+
+      it 'warns without failing', :aggregate_failures do
+        expect(subject.exitstatus).to eq(0)
+        expect(subject.stderr).to include('version 0', 'env-agent init')
+      end
+    end
+  end
 end

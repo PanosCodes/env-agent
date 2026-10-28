@@ -83,7 +83,8 @@ macOS with Ruby 3.3, 3.4 and 4.0. A change is done when it passes.
 
 ## Releasing
 
-`bin/release VERSION` bumps `EnvAgent::VERSION` and `Gemfile.lock`, runs
+`bin/release major|minor|patch` (or `bin/release VERSION`) bumps
+`EnvAgent::VERSION` and `Gemfile.lock` with the `bump` gem, runs
 `bundle exec rake`, builds the gem, commits `build: release vVERSION`, tags and
 pushes `master`, and creates a GitHub release with the `.gem` attached. Nothing
 goes to RubyGems. It refuses a dirty tree, another branch, a `master` behind or

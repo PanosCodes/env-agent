@@ -1,17 +1,20 @@
 #!/usr/bin/env ruby
+require 'bundler/setup'
+require 'bump'
 require 'open3'
 require_relative '../lib/env_agent/version'
 
-# Releases env-agent VERSION: bumps it, checks, commits, tags, pushes and creates the GitHub release.
+# Releases env-agent at the next major, minor or patch version, or at VERSION: bumps it, checks, commits, tags, pushes and creates the GitHub release.
 class Release
   BRANCH = 'master'.freeze
   VERSION_FILE = 'lib/env_agent/version.rb'.freeze
   LOCK_FILE = 'Gemfile.lock'.freeze
+  INCREMENTS = %w[major minor patch].freeze
 
   # @param [Array<String>] argv
   def initialize(argv)
-    abort('usage: bin/release VERSION') unless argv.size == 1
-    @version = argv.first
+    abort('usage: bin/release major|minor|patch|VERSION') unless argv.size == 1
+    @version = INCREMENTS.include?(argv.first) ? Bump::Bump.next_version(argv.first, EnvAgent::VERSION) : argv.first
   end
 
   def run!
@@ -57,18 +60,8 @@ class Release
   end
 
   def bump!
-    replace(VERSION_FILE, "VERSION = '#{EnvAgent::VERSION}'", "VERSION = '#{version}'")
-    replace(LOCK_FILE, "env-agent (#{EnvAgent::VERSION})", "env-agent (#{version})")
-  end
-
-  # @param [String] file
-  # @param [String] from
-  # @param [String] to
-  def replace(file, from, to)
-    text = File.read(file)
-    abort("#{file} has no #{from}") unless text.include?(from)
-
-    File.write(file, text.gsub(from) { to })
+    message, status = Bump::Bump.run('set', version: version, commit: false, tag: false, bundle: true)
+    abort(message) unless status.zero?
   end
 
   # @param [String] ancestor

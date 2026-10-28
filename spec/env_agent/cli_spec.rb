@@ -12,6 +12,7 @@ RSpec.describe EnvAgent::CLI do
   let(:main_dotenv) { File.join(sandbox.main, '.env.agents') }
   let(:elsewhere) { File.join(sandbox.root, 'elsewhere', name) }
   let(:gone) { File.join(sandbox.root, 'gone') }
+  let(:outside) { File.join(sandbox.root, 'outside') }
   let(:no_account) { '~no-such-account-env-agent/dir' }
 
   before do
@@ -37,6 +38,22 @@ RSpec.describe EnvAgent::CLI do
       expect { subject }.not_to(change { File.read(main_dotenv) })
       expect(subject.stderr).to include('.env.agents is committed in the main checkout', 'git rm --cached')
       expect(File.symlink?(link)).to be(false)
+    end
+  end
+
+  shared_examples 'leaves a linked .env-agent alone' do
+    let(:outside_link) { File.join(outside, name) }
+
+    before do
+      FileUtils.mkdir_p(outside)
+      File.symlink(elsewhere, outside_link)
+      File.symlink(outside, File.join(sandbox.main, '.env-agent'))
+    end
+
+    it 'fails without changing the directory it points to', :aggregate_failures do
+      expect(subject.exitstatus).to eq(1)
+      expect(subject.stderr).to include('.env-agent is a link')
+      expect(Dir.children(outside)).to eq([name])
     end
   end
 
@@ -128,6 +145,10 @@ RSpec.describe EnvAgent::CLI do
 
     context 'when .env.agents is committed' do
       it_behaves_like 'refuses a committed .env.agents'
+    end
+
+    context 'when .env-agent is a link' do
+      it_behaves_like 'leaves a linked .env-agent alone'
     end
 
     context 'with an invalid name' do
@@ -236,6 +257,10 @@ RSpec.describe EnvAgent::CLI do
       it_behaves_like 'refuses a committed .env.agents'
     end
 
+    context 'when .env-agent is a link' do
+      it_behaves_like 'leaves a linked .env-agent alone'
+    end
+
     context 'when nothing is set' do
       before { FileUtils.rm_f(main_dotenv) }
 
@@ -259,6 +284,12 @@ RSpec.describe EnvAgent::CLI do
     it 'removes the name and the link, keeping other lines', :aggregate_failures do
       expect { subject }.to change { File.read(main_dotenv) }.to("#{other_line}\n")
       expect(File.symlink?(link)).to be(false)
+    end
+
+    context 'when .env-agent is a link' do
+      before { FileUtils.rm_rf(File.join(sandbox.main, '.env-agent')) }
+
+      it_behaves_like 'leaves a linked .env-agent alone'
     end
   end
 
@@ -333,6 +364,35 @@ RSpec.describe EnvAgent::CLI do
         expect(subject.stdout).to eq("already up to date\n")
       end
     end
+
+    context 'when the agent copy is a link out of the checkout' do
+      let(:victim) { File.join(sandbox.root, 'victim.txt') }
+
+      before do
+        File.write(victim, "mine\n")
+        FileUtils.mkdir_p(File.dirname(repo_copy))
+        File.symlink(victim, repo_copy)
+      end
+
+      it 'fails without writing through the link', :aggregate_failures do
+        expect(subject.exitstatus).to eq(1)
+        expect(subject.stderr).to include('.AGENT/agents/env-agent.md is a link')
+        expect(File.read(victim)).to eq("mine\n")
+      end
+    end
+
+    context 'when .claude is a link out of the checkout' do
+      before do
+        FileUtils.mkdir_p(outside)
+        File.symlink(outside, File.join(sandbox.main, '.claude'))
+      end
+
+      it 'fails before writing anything', :aggregate_failures do
+        expect(subject.exitstatus).to eq(1)
+        expect(Dir.children(outside)).to be_empty
+        expect(File.exist?(repo_copy)).to be(false)
+      end
+    end
   end
 
   describe 'install-agent' do
@@ -347,5 +407,18 @@ RSpec.describe EnvAgent::CLI do
     end
 
     it_behaves_like 'prints no path'
+
+    context 'when ~/.claude is a link to the user\'s dotfiles' do
+      let(:dotfiles) { File.join(sandbox.root, 'dotfiles', 'claude') }
+
+      before do
+        FileUtils.mkdir_p(dotfiles)
+        File.symlink(dotfiles, File.join(sandbox.home, '.claude'))
+      end
+
+      it 'writes through it' do
+        expect { subject }.to change { File.exist?(File.join(dotfiles, 'agents', 'env-agent.md')) }.to(true)
+      end
+    end
   end
 end

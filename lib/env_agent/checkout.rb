@@ -1,4 +1,5 @@
 require 'open3'
+require 'pathname'
 
 # The git checkout env-agent runs in: the current worktree and the main checkout behind it.
 class EnvAgent::Checkout
@@ -39,6 +40,18 @@ class EnvAgent::Checkout
   # @return [EnvAgent::Dotenv] this worktree's .env.agents
   def worktree_dotenv
     @worktree_dotenv ||= untracked_dotenv(root, 'this worktree')
+  end
+
+  # @param [String] relative path inside the current worktree that env-agent writes to
+  #
+  # @raise [EnvAgent::Error] when the path, or a directory on the way to it, is a link
+  #
+  # @return [String] the absolute path
+  def own_path!(relative)
+    Pathname(relative).descend do |part|
+      raise EnvAgent::Error, "#{part} is a link; move it away first" if File.symlink?(File.join(root, part))
+    end
+    File.join(root, relative)
   end
 
   private

@@ -19,13 +19,17 @@ class EnvAgent::Agent
     text[/^version:\s*(\d+)\s*$/, 1]&.to_i
   end
 
-  # @param [String] root checkout root
+  # @param [EnvAgent::Checkout] checkout
+  #
+  # @raise [EnvAgent::Error] when a link is on the way to either copy
   #
   # @return [Array<String>] what changed, in repo-relative terms
-  def write_repo!(root)
+  def write_repo!(checkout)
+    repo_copy = checkout.own_path!(REPO_COPY)
+    claude_copy = File.join(checkout.own_path!(File.dirname(CLAUDE_COPY)), File.basename(CLAUDE_COPY))
     actions = []
-    actions << "wrote #{REPO_COPY}" if write_if_changed(File.join(root, REPO_COPY))
-    actions << "linked #{CLAUDE_COPY} -> #{REPO_COPY}" if link_claude_copy(File.join(root, CLAUDE_COPY))
+    actions << "wrote #{REPO_COPY}" if write_if_changed(repo_copy)
+    actions << "linked #{CLAUDE_COPY} -> #{REPO_COPY}" if link_claude_copy(claude_copy)
     actions
   end
 

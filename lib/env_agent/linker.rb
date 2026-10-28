@@ -4,10 +4,10 @@ require 'fileutils'
 class EnvAgent::Linker
   DIR = '.env-agent'.freeze
 
-  # @param [String] root checkout root the link lives in
+  # @param [EnvAgent::Checkout] checkout the checkout the link lives in
   # @param [String] name registry name
-  def initialize(root, name)
-    @root = root
+  def initialize(checkout, name)
+    @checkout = checkout
     @name = name
   end
 
@@ -18,16 +18,18 @@ class EnvAgent::Linker
 
   # @param [String] target directory the link should point at
   #
-  # @raise [EnvAgent::Error] when something other than a link is in the way
+  # @raise [EnvAgent::Error] when something other than a link is in the way, or .env-agent is a link
   def link!(target)
     remove!
     raise EnvAgent::Error, "#{relative_path} exists and is not a link; move it away first" if File.exist?(path)
 
-    FileUtils.mkdir_p(File.dirname(path))
+    FileUtils.mkdir_p(own_dir!)
     File.symlink(target, path)
   end
 
+  # @raise [EnvAgent::Error] when .env-agent is a link
   def remove!
+    own_dir!
     File.unlink(path) if File.symlink?(path)
   end
 
@@ -45,10 +47,17 @@ class EnvAgent::Linker
 
   private
 
-  attr_reader :root, :name
+  attr_reader :checkout, :name
 
   # @return [String]
   def path
-    File.join(root, DIR, name)
+    File.join(checkout.root, DIR, name)
+  end
+
+  # @raise [EnvAgent::Error] when .env-agent is a link
+  #
+  # @return [String]
+  def own_dir!
+    checkout.own_path!(DIR)
   end
 end

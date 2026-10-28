@@ -134,7 +134,7 @@ class EnvAgent::CLI
   # @return [Integer]
   def init
     excluder.apply!
-    actions = agent.write_repo!(checkout.root)
+    actions = agent.write_repo!(checkout)
     say(actions.empty? ? 'already up to date' : actions)
   end
 
@@ -291,6 +291,6 @@ class EnvAgent::CLI
   #
   # @return [EnvAgent::Linker]
   def linker(name)
-    EnvAgent::Linker.new(checkout.root, name)
+    EnvAgent::Linker.new(checkout, name)
   end
 end

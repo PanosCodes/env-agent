@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bundle install)",
+      "Bash(bundle exec rake)",
+      "Bash(bundle exec rake:*)",
+      "Bash(bundle exec rspec:*)",
+      "Bash(bundle exec rubocop:*)"
+    ]
+  }
+}

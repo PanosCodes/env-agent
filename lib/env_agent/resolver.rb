@@ -52,8 +52,8 @@ class EnvAgent::Resolver
   # @return [Array<Array(Symbol, String)>]
   def sources
     list = []
-    list << [:worktree, EnvAgent::Dotenv.new(checkout.root)[name]] unless checkout.main?
-    list << [:main, EnvAgent::Dotenv.new(checkout.main_root)[name]]
+    list << [:worktree, checkout.worktree_dotenv[name]] unless checkout.main?
+    list << [:main, checkout.main_dotenv[name]]
   end
 
   # @param [String, nil] path

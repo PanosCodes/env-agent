@@ -27,6 +27,19 @@ RSpec.describe EnvAgent::CLI do
     end
   end
 
+  shared_examples 'refuses a committed .env.agents' do
+    before do
+      File.write(main_dotenv, "#{name}=~\n")
+      sandbox.commit!('.env.agents')
+    end
+
+    it 'fails without linking or touching the file', :aggregate_failures do
+      expect { subject }.not_to(change { File.read(main_dotenv) })
+      expect(subject.stderr).to include('.env.agents is committed in the main checkout', 'git rm --cached')
+      expect(File.symlink?(link)).to be(false)
+    end
+  end
+
   shared_examples 'links to' do |label|
     it "links to the directory saved in the #{label}", :aggregate_failures do
       expect(subject.exitstatus).to eq(0)
@@ -111,6 +124,10 @@ RSpec.describe EnvAgent::CLI do
         expect(subject.exitstatus).to eq(1)
         expect(subject.output).not_to include('no-such-account')
       end
+    end
+
+    context 'when .env.agents is committed' do
+      it_behaves_like 'refuses a committed .env.agents'
     end
 
     context 'with an invalid name' do
@@ -213,6 +230,10 @@ RSpec.describe EnvAgent::CLI do
         expect(subject.stderr).to include("#{name}: not linked (main checkout .env.agents: directory missing)")
         expect(subject.output).not_to include('no-such-account')
       end
+    end
+
+    context 'when .env.agents is committed' do
+      it_behaves_like 'refuses a committed .env.agents'
     end
 
     context 'when nothing is set' do

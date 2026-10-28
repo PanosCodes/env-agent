@@ -27,17 +27,65 @@ class EnvAgent::Checkout
     root == main_root
   end
 
+  # @raise [EnvAgent::Error] when git tracks the file
+  #
+  # @return [EnvAgent::Dotenv] the main checkout's .env.agents
+  def main_dotenv
+    @main_dotenv ||= untracked_dotenv(main_root, 'the main checkout')
+  end
+
+  # @raise [EnvAgent::Error] when git tracks the file
+  #
+  # @return [EnvAgent::Dotenv] this worktree's .env.agents
+  def worktree_dotenv
+    @worktree_dotenv ||= untracked_dotenv(root, 'this worktree')
+  end
+
   private
 
   attr_reader :dir
+
+  # @param [String] checkout_root
+  # @param [String] where
+  #
+  # @raise [EnvAgent::Error] when git tracks the file
+  #
+  # @return [EnvAgent::Dotenv]
+  def untracked_dotenv(checkout_root, where)
+    file = EnvAgent::Dotenv::FILE
+
+    if tracked?(checkout_root, file)
+      raise EnvAgent::Error, "#{file} is committed in #{where}, so env-agent will not use it. " \
+                             "Keep it on this machine only: git rm --cached #{file}"
+    end
+
+    EnvAgent::Dotenv.new(checkout_root)
+  end
+
+  # @param [String] checkout_root
+  # @param [String] relative
+  #
+  # @return [TrueClass, FalseClass] false also when checkout_root is not a checkout
+  def tracked?(checkout_root, relative)
+    out, status = capture(checkout_root, 'ls-files', '-z', '--', relative)
+    status.success? && !out.empty?
+  end
 
   # @param [Array<String>] args
   #
   # @return [String]
   def git(*args)
-    out, status = Open3.capture2('git', *args, chdir: dir, err: File::NULL)
+    out, status = capture(dir, *args)
     raise EnvAgent::UsageError, 'not inside a git checkout' unless status.success?
 
     out.strip
+  end
+
+  # @param [String] chdir
+  # @param [Array<String>] args
+  #
+  # @return [Array(String, Process::Status)]
+  def capture(chdir, *args)
+    Open3.capture2('git', *args, chdir: chdir, err: File::NULL)
   end
 end

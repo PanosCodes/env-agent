@@ -95,7 +95,7 @@ class EnvAgent::CLI
     raise EnvAgent::Error, "#{name}: that directory does not exist. Nothing saved." unless File.directory?(path)
 
     excluder.apply!
-    EnvAgent::Dotenv.new(checkout.main_root).set(name, path)
+    checkout.main_dotenv.set(name, path)
     winner = resolver(name).resolve
     linker(name).link!(winner.path)
     stdout.puts("#{name}: set, linked (#{winner.label})")
@@ -126,7 +126,7 @@ class EnvAgent::CLI
   # @return [Integer]
   def unset(name)
     validate_name!(name)
-    removed = EnvAgent::Dotenv.new(checkout.main_root).delete(name)
+    removed = checkout.main_dotenv.delete(name)
     linker(name).remove!
     say("#{name}: #{removed ? 'unset' : 'was not set'}, link removed")
   end
@@ -222,14 +222,14 @@ class EnvAgent::CLI
   def names(name)
     return [validate_name!(name)] if name
 
-    list = (worktree_dotenv_names + EnvAgent::Dotenv.new(checkout.main_root).names).uniq.sort
+    list = (worktree_dotenv_names + checkout.main_dotenv.names).uniq.sort
     stdout.puts("nothing set in #{EnvAgent::Dotenv::FILE} (use `env-agent set NAME DIR`)") if list.empty?
     list
   end
 
   # @return [Array<String>]
   def worktree_dotenv_names
-    checkout.main? ? [] : EnvAgent::Dotenv.new(checkout.root).names
+    checkout.main? ? [] : checkout.worktree_dotenv.names
   end
 
   # @param [String] name

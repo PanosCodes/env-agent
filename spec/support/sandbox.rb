@@ -2,7 +2,7 @@ require 'fileutils'
 require 'open3'
 require 'rbconfig'
 
-# A throwaway main checkout, linked worktree, sibling clones and HOME, with the CLI run as a real process.
+# A throwaway main checkout, linked worktree and HOME, with the CLI run as a real process.
 class Sandbox
   EXE = File.expand_path('../../exe/env-agent', __dir__)
 
@@ -40,13 +40,6 @@ class Sandbox
     File.join(root, 'home')
   end
 
-  # @param [String] name
-  #
-  # @return [String] where the sibling default looks for a clone
-  def sibling(name)
-    File.join(root, name)
-  end
-
   def build_main!
     FileUtils.mkdir_p([main, home])
     git(main, '-c', 'init.defaultBranch=main', 'init', '-q')
@@ -62,13 +55,6 @@ class Sandbox
 
   def add_worktree!
     git(main, 'worktree', 'add', '-q', '-b', 'wt', worktree)
-  end
-
-  # @param [String] dir
-  # @param [String] marker
-  def clone!(dir, marker)
-    FileUtils.mkdir_p(File.dirname(File.join(dir, marker)))
-    File.write(File.join(dir, marker), "marker\n")
   end
 
   # @param [Array<String>] args

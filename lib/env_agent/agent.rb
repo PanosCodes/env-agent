@@ -12,17 +12,11 @@ class EnvAgent::Agent
     File.read(TEMPLATE)
   end
 
-  # @return [Integer]
-  def self.template_version
-    version_of(template)
-  end
-
   # @param [String] text agent markdown
   #
   # @return [Integer, nil] the frontmatter version
   def self.version_of(text)
-    version = text[/^version:\s*(\d+)\s*$/, 1]
-    version&.to_i
+    text[/^version:\s*(\d+)\s*$/, 1]&.to_i
   end
 
   # @param [String] root checkout root

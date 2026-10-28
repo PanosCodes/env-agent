@@ -77,8 +77,8 @@ class EnvAgent::CLI
     when 'link' then link(arity!(args, 0, 1).first)
     when 'check' then check(arity!(args, 0, 1).first)
     when 'unset' then unset(arity!(args, 1, 1).first)
-    when 'init' then init(arity!(args, 0, 0))
-    when 'install-agent' then install_agent(arity!(args, 0, 0))
+    when 'init' then arity!(args, 0, 0) && init
+    when 'install-agent' then arity!(args, 0, 0) && install_agent
     when nil, 'help', '-h', '--help' then say(USAGE)
     when 'version', '-v', '--version' then say(EnvAgent::VERSION)
     else raise EnvAgent::UsageError, "unknown command '#{command}'"
@@ -132,14 +132,14 @@ class EnvAgent::CLI
   end
 
   # @return [Integer]
-  def init(_args)
+  def init
     excluder.apply!
     actions = agent.write_repo!(checkout.root)
     say(actions.empty? ? 'already up to date' : actions)
   end
 
   # @return [Integer]
-  def install_agent(_args)
+  def install_agent
     changed = agent.write_user!(Dir.home)
     say(changed ? "installed ~/#{EnvAgent::Agent::CLAUDE_COPY}" : 'already up to date')
   end
@@ -172,7 +172,7 @@ class EnvAgent::CLI
   def check_name(name)
     winner = resolver(name).resolve
     stdout.puts("#{name}: #{winner ? "ok (#{winner.label})" : 'not found'}")
-    resolver(name).candidates.each { |candidate| stdout.puts("  #{candidate.label}: #{candidate.outcome_text}") }
+    resolver(name).candidates.each { |candidate| stdout.puts("  #{candidate}") }
     stdout.puts("  link #{linker(name).relative_path}: #{LINK_STATES.fetch(linker(name).state(winner&.path))}")
     stdout.puts(not_found_hint(name)) unless winner
     !winner.nil?
@@ -182,7 +182,7 @@ class EnvAgent::CLI
   #
   # @return [String]
   def summary(name)
-    resolver(name).candidates.map { |candidate| "#{candidate.label}: #{candidate.outcome_text}" }.join(', ')
+    resolver(name).candidates.join(', ')
   end
 
   # @param [String] name
@@ -209,7 +209,7 @@ class EnvAgent::CLI
 
   def warn_outdated_agent
     version = agent.repo_version(checkout.root)
-    latest = EnvAgent::Agent.template_version
+    latest = EnvAgent::Agent.version_of(EnvAgent::Agent.template)
     return unless version && version < latest
 
     stderr.puts("warning: this repo's env-agent agent is version #{version}; this CLI ships version #{latest}. " \

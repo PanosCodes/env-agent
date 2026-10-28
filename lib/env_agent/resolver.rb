@@ -21,6 +21,11 @@ class EnvAgent::Resolver
     def outcome_text
       OUTCOMES.fetch(outcome)
     end
+
+    # @return [String]
+    def to_s
+      "#{label}: #{outcome_text}"
+    end
   end
 
   # @param [String] name

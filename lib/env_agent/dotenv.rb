@@ -3,8 +3,8 @@ require 'fileutils'
 # A .env.agents file: NAME=directory lines, optional quotes and # comments, no interpolation.
 class EnvAgent::Dotenv
   FILE = '.env.agents'.freeze
-  NAME = /[A-Za-z0-9_][A-Za-z0-9_.-]*/.freeze
-  LINE = /\A\s*(?:export\s+)?(#{NAME})\s*=\s*(.*)\z/.freeze
+  NAME = /[A-Za-z0-9_][A-Za-z0-9_.-]*/
+  LINE = /\A\s*(?:export\s+)?(#{NAME})\s*=\s*(.*)\z/
 
   # @param [String] name
   #
@@ -90,8 +90,7 @@ class EnvAgent::Dotenv
   #
   # @return [String, nil]
   def key_of(line)
-    match = LINE.match(line)
-    match && match[1]
+    LINE.match(line)&.[](1)
   end
 
   # @param [String] raw

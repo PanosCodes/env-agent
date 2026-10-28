@@ -26,6 +26,14 @@ RSpec.describe EnvAgent::CLI do
     end
   end
 
+  shared_examples 'links to' do |label|
+    it "links to the directory saved in the #{label}", :aggregate_failures do
+      expect(subject.exitstatus).to eq(0)
+      expect(File.realpath(link)).to eq(File.realpath(target))
+      expect(subject.stdout).to include("#{name}: linked (#{label})")
+    end
+  end
+
   describe 'set' do
     subject { sandbox.run(*args, cwd: cwd) }
 
@@ -111,6 +119,89 @@ RSpec.describe EnvAgent::CLI do
       end
 
       it_behaves_like 'prints no path'
+    end
+  end
+
+  describe 'link' do
+    subject { sandbox.run('link', cwd: cwd) }
+
+    before { File.write(main_dotenv, "#{name}=#{elsewhere}\n") }
+
+    it_behaves_like 'links to', 'main checkout .env.agents' do
+      let(:target) { elsewhere }
+    end
+    it_behaves_like 'prints no path'
+
+    context 'when run from a linked worktree' do
+      let(:cwd) { sandbox.worktree }
+
+      before { sandbox.add_worktree! }
+
+      it_behaves_like 'links to', 'main checkout .env.agents' do
+        let(:target) { elsewhere }
+      end
+      it_behaves_like 'prints no path'
+
+      context 'with its own .env.agents' do
+        let(:override) { File.join(sandbox.root, 'override', name) }
+
+        before do
+          FileUtils.mkdir_p(override)
+          File.write(File.join(sandbox.worktree, '.env.agents'), "#{name}=#{override}\n")
+        end
+
+        it_behaves_like 'links to', 'worktree .env.agents' do
+          let(:target) { override }
+        end
+      end
+
+      context 'with its own .env.agents pointing at a missing directory' do
+        before { File.write(File.join(sandbox.worktree, '.env.agents'), "#{name}=#{gone}\n") }
+
+        it_behaves_like 'links to', 'main checkout .env.agents' do
+          let(:target) { elsewhere }
+        end
+      end
+    end
+
+    context 'with the name also in the process env' do
+      subject { sandbox.run('link', env: { name => gone }) }
+
+      it_behaves_like 'links to', 'main checkout .env.agents' do
+        let(:target) { elsewhere }
+      end
+    end
+
+    context 'with an existing stale link' do
+      before do
+        FileUtils.mkdir_p([gone, File.dirname(link)])
+        File.symlink(gone, link)
+      end
+
+      it_behaves_like 'links to', 'main checkout .env.agents' do
+        let(:target) { elsewhere }
+      end
+    end
+
+    context 'when the saved directory is gone' do
+      before { FileUtils.rm_rf(elsewhere) }
+
+      it 'fails, removes the link and says how to fix it', :aggregate_failures do
+        expect(subject.exitstatus).to eq(1)
+        expect(File.symlink?(link)).to be(false)
+        expect(subject.stderr).to include("env-agent set #{name}", 'env-agent agent')
+      end
+
+      it_behaves_like 'prints no path'
+    end
+
+    context 'when nothing is set' do
+      before { FileUtils.rm_f(main_dotenv) }
+
+      it 'says so and succeeds', :aggregate_failures do
+        expect(subject.exitstatus).to eq(0)
+        expect(subject.stdout).to include('nothing set in .env.agents')
+      end
     end
   end
 end

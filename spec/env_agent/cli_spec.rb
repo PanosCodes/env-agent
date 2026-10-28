@@ -12,6 +12,7 @@ RSpec.describe EnvAgent::CLI do
   let(:main_dotenv) { File.join(sandbox.main, '.env.agents') }
   let(:elsewhere) { File.join(sandbox.root, 'elsewhere', name) }
   let(:gone) { File.join(sandbox.root, 'gone') }
+  let(:no_account) { '~no-such-account-env-agent/dir' }
 
   before do
     sandbox.build_main!
@@ -101,6 +102,15 @@ RSpec.describe EnvAgent::CLI do
       end
 
       it_behaves_like 'prints no path'
+    end
+
+    context 'with a ~name that names no account' do
+      let(:args) { ['set', name, no_account] }
+
+      it 'saves nothing and does not echo it', :aggregate_failures do
+        expect(subject.exitstatus).to eq(1)
+        expect(subject.output).not_to include('no-such-account')
+      end
     end
 
     context 'with an invalid name' do
@@ -193,6 +203,16 @@ RSpec.describe EnvAgent::CLI do
       end
 
       it_behaves_like 'prints no path'
+    end
+
+    context 'with a saved ~name that names no account' do
+      before { File.write(main_dotenv, "#{name}=#{no_account}\n") }
+
+      it 'reports it as not found without echoing it', :aggregate_failures do
+        expect(subject.exitstatus).to eq(1)
+        expect(subject.stderr).to include("#{name}: not linked (main checkout .env.agents: directory missing)")
+        expect(subject.output).not_to include('no-such-account')
+      end
     end
 
     context 'when nothing is set' do

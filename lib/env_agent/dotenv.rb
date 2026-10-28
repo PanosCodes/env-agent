@@ -13,6 +13,16 @@ class EnvAgent::Dotenv
     name.match?(/\A#{NAME}\z/)
   end
 
+  # @param [String] value a directory as typed or saved
+  # @param [String] base directory a relative value is resolved against
+  #
+  # @return [String] the absolute path; a ~name that names no account stays literal, as in a shell
+  def self.absolute(value, base = Dir.pwd)
+    File.expand_path(value, base)
+  rescue ArgumentError
+    File.expand_path("./#{value}", base)
+  end
+
   # @param [String] dir directory holding the .env.agents file
   def initialize(dir)
     @path = File.join(dir, FILE)
@@ -30,7 +40,7 @@ class EnvAgent::Dotenv
     value = values[key]
     return if value.nil? || value.empty?
 
-    File.expand_path(value, File.dirname(path))
+    self.class.absolute(value, File.dirname(path))
   end
 
   # @param [String] key

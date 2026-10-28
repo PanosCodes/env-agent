@@ -58,6 +58,9 @@ class EnvAgent::CLI
   rescue SystemCallError => e
     stderr.puts("env-agent: #{SystemCallError.new(e.errno).message}")
     1
+  rescue StandardError => e
+    stderr.puts("env-agent: unexpected #{e.class}; details withheld so no path is printed")
+    1
   end
 
   private
@@ -88,7 +91,7 @@ class EnvAgent::CLI
   # @return [Integer]
   def set(name, dir = nil)
     validate_name!(name)
-    path = File.expand_path(dir || ask_for_dir(name))
+    path = EnvAgent::Dotenv.absolute(dir || ask_for_dir(name))
     raise EnvAgent::Error, "#{name}: that directory does not exist. Nothing saved." unless File.directory?(path)
 
     excluder.apply!

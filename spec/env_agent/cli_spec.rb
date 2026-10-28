@@ -291,4 +291,40 @@ RSpec.describe EnvAgent::CLI do
       end
     end
   end
+
+  describe 'init' do
+    subject { sandbox.run('init') }
+
+    let(:repo_copy) { File.join(sandbox.main, '.AGENT', 'agents', 'env-agent.md') }
+    let(:claude_copy) { File.join(sandbox.main, '.claude', 'agents', 'env-agent.md') }
+    let(:template) { File.read(File.expand_path('../../templates/agent.md', __dir__)) }
+
+    it 'writes the agent and a relative link to it', :aggregate_failures do
+      expect(subject.exitstatus).to eq(0)
+      expect(File.read(repo_copy)).to eq(template)
+      expect(File.readlink(claude_copy)).to eq('../../.AGENT/agents/env-agent.md')
+    end
+
+    context 'when run twice' do
+      before { sandbox.run('init') }
+
+      it 'reports that everything is up to date' do
+        expect(subject.stdout).to eq("already up to date\n")
+      end
+    end
+  end
+
+  describe 'install-agent' do
+    subject { sandbox.run('install-agent') }
+
+    let(:user_copy) { File.join(sandbox.home, '.claude', 'agents', 'env-agent.md') }
+    let(:template) { File.read(File.expand_path('../../templates/agent.md', __dir__)) }
+
+    it 'writes the agent into the user config', :aggregate_failures do
+      expect(subject.exitstatus).to eq(0)
+      expect(File.read(user_copy)).to eq(template)
+    end
+
+    it_behaves_like 'prints no path'
+  end
 end
